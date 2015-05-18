@@ -1,12 +1,14 @@
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileFilter;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -198,140 +200,6 @@ public class Utils
 		bwAIO.close();
 	}
 
-	public void extractResultForDAATFromOne(String dirPath, BufferedWriter bwall)
-	        throws IOException
-	{
-		File dir = new File(dirPath);
-		File[] results = dir.listFiles();
-		BufferedWriter bwAIO = new BufferedWriter(new FileWriter(new File(
-		        dirPath + "DAAT.csv")));
-		for (int i = 0; i < results.length; i++)
-		{
-			BufferedReader br = new BufferedReader(new FileReader(results[i]));
-			// 只取最后一次的结果，一共有四次
-			// 以"time to intialise index"为标记
-			String line;
-			final String MARK = "time to intialise index";
-			final CharSequence csMARK = MARK.subSequence(0, MARK.length());
-			final String TIME = "Time to process query";
-			final CharSequence csTIME = TIME.subSequence(0, TIME.length());
-			int count = 0;
-			while (true)
-			{
-				line = br.readLine();
-				if (line.contains(csMARK))
-				{
-					count++;
-					if (count == 4)
-						break;
-				}
-			}
-			int queryLength = 2;
-			int time = 1;
-			// 寻找时间行并输出
-			while (line != null)
-			{
-				if (line.contains(csTIME))
-				{
-					String[] temp = line.substring(line.indexOf(TIME),
-					        line.length()).split("[: ]");
-					double tmptime = Double.valueOf(temp[temp.length - 1]) * 1000;
-					// 纵向输出
-					// format: "DAAT $QUERY_LENGTH $TIME"
-					if (time == 101)
-					{
-						time = 1;
-						queryLength++;
-					}
-					bwAIO.write("DAAT," + queryLength + ","
-					        + String.valueOf(tmptime));
-					bwAIO.newLine();
-					bwall.write("DAAT," + queryLength + ","
-					        + String.valueOf(tmptime));
-					bwall.newLine();
-					time++;
-				}
-				line = br.readLine();
-			}
-			br.close();
-		}
-		bwAIO.flush();
-		bwAIO.close();
-	}
-
-	public void extractResultForDPFromOne(String dirPath, final String dpType,
-	        BufferedWriter bwall) throws IOException
-	{
-		File dir = new File(dirPath);
-		File[] results = dir.listFiles();
-		BufferedWriter bwAIO = new BufferedWriter(new FileWriter(new File(
-		        dirPath + dpType + ".csv")));
-		for (int i = 0; i < results.length; i++)
-		{
-			BufferedReader br = new BufferedReader(new FileReader(results[i]));
-			// 只取最后一次的结果，一共有四次
-			// 以"time to intialise index"为标记
-			String line;
-			final String MARK = "time to intialise index";
-			final CharSequence csMARK = MARK.subSequence(0, MARK.length());
-			final String TIME = "Time to process query";
-			final CharSequence csTIME = TIME.subSequence(0, TIME.length());
-			final String WASTE = "time wasted";
-			final CharSequence csWASTE = WASTE.subSequence(0, WASTE.length());
-			int count = 0;
-			while (true)
-			{
-				line = br.readLine();
-				if (line.contains(csMARK))
-				{
-					count++;
-					if (count == 4)
-						break;
-				}
-			}
-			// 寻找时间行并输出
-			double wastetime = 0.0;
-			int queryLength = 2;
-			int time = 1;
-			while (line != null)
-			{
-				if (line.contains(csWASTE))
-				{
-					String[] temp = line.substring(line.indexOf(WASTE),
-					        line.length()).split("[: ]");
-					wastetime = Double.valueOf(temp[temp.length - 1]);
-					line = br.readLine();
-					continue;
-				}
-				if (line.contains(csTIME))
-				{
-					String[] temp = line.substring(line.indexOf(TIME),
-					        line.length()).split("[: ]");
-					double tmptime = (Double.valueOf(temp[temp.length - 1]) - wastetime) * 1000;
-					// 纵向输出
-					// format:"$DP_TYPE $QUERY_LENGTH $TIME"
-					if (time == 101)
-					{
-						time = 1;
-						queryLength++;
-					}
-					bwAIO.write(dpType + "," + queryLength + ","
-					        + String.valueOf(tmptime));
-					bwAIO.newLine();
-					bwall.write(dpType + "," + queryLength + ","
-					        + String.valueOf(tmptime));
-					bwall.newLine();
-					wastetime = 0.0;
-					time++;
-				}
-				line = br.readLine();
-			}
-			br.close();
-		}
-		bwAIO.flush();
-		bwAIO.close();
-	}
-
 	public void extractResultForDP(String dirPath, final String dpType)
 	        throws IOException
 	{
@@ -416,15 +284,170 @@ public class Utils
 		bwAIO.close();
 	}
 
+	public void extractResultForDAATFromOne(File file, BufferedWriter bwall)
+	        throws IOException
+	{
+		// File dir = new File(dirPath);
+		// File[] results = dir.listFiles();
+		// BufferedWriter bwAIO = new BufferedWriter(new FileWriter(new File(
+		// file.getAbsolutePath() + "DAAT.csv")));file.getParent()
+		// for (int i = 0; i < results.length; i++)
+		// {
+		BufferedReader br = new BufferedReader(new FileReader(file));
+		// 只取最后一次的结果，一共有四次
+		// 以"time to intialise index"为标记
+		String line;
+		final String MARK = "time to intialise index";
+		final CharSequence csMARK = MARK.subSequence(0, MARK.length());
+		final String TIME = "Time to process query";
+		final CharSequence csTIME = TIME.subSequence(0, TIME.length());
+		int count = 0;
+		while (true)
+		{
+			line = br.readLine();
+			if (line.contains(csMARK))
+			{
+				count++;
+				if (count == 4)
+					break;
+			}
+		}
+		int queryLength = 2;
+		int time = 1;
+		// 寻找时间行并输出
+		while (line != null)
+		{
+			if (line.contains(csTIME))
+			{
+				String[] temp = line.substring(line.indexOf(TIME),
+				        line.length()).split("[: ]");
+				double tmptime = Double.valueOf(temp[temp.length - 1]) * 1000;
+				// 纵向输出
+				// format: "DAAT $QUERY_LENGTH $TIME"
+				if (time == 101)
+				{
+					time = 1;
+					queryLength++;
+				}
+				// bwAIO.write("DAAT," + queryLength + ","
+				// + String.valueOf(tmptime));
+				// bwAIO.newLine();
+				bwall.write("DAAT," + queryLength + ","
+				        + String.valueOf(tmptime));
+				bwall.newLine();
+				time++;
+			}
+			line = br.readLine();
+		}
+		br.close();
+		// }
+		// bwAIO.flush();
+		// bwAIO.close();
+	}
+
+	public void extractResultForDPFromOne(File file, final String dpType,
+	        BufferedWriter bwall) throws IOException
+	{
+		// File dir = new File(dirPath);
+		// File[] results = dir.listFiles();
+		// BufferedWriter bwAIO = new BufferedWriter(new FileWriter(new File(
+		// dirPath + dpType + ".csv")));
+		// for (int i = 0; i < results.length; i++)
+		// {
+		BufferedReader br = new BufferedReader(new FileReader(file));
+		// 只取最后一次的结果，一共有四次
+		// 以"time to intialise index"为标记
+		String line;
+		final String MARK = "time to intialise index";
+		final CharSequence csMARK = MARK.subSequence(0, MARK.length());
+		final String TIME = "Time to process query";
+		final CharSequence csTIME = TIME.subSequence(0, TIME.length());
+		final String WASTE = "time wasted";
+		final CharSequence csWASTE = WASTE.subSequence(0, WASTE.length());
+		int count = 0;
+		while (true)
+		{
+			line = br.readLine();
+			if (line.contains(csMARK))
+			{
+				count++;
+				if (count == 4)
+					break;
+			}
+		}
+		// 寻找时间行并输出
+		double wastetime = 0.0;
+		int queryLength = 2;
+		int time = 1;
+		while (line != null)
+		{
+			if (line.contains(csWASTE))
+			{
+				String[] temp = line.substring(line.indexOf(WASTE),
+				        line.length()).split("[: ]");
+				wastetime = Double.valueOf(temp[temp.length - 1]);
+				line = br.readLine();
+				continue;
+			}
+			if (line.contains(csTIME))
+			{
+				String[] temp = line.substring(line.indexOf(TIME),
+				        line.length()).split("[: ]");
+				double tmptime = (Double.valueOf(temp[temp.length - 1]) - wastetime) * 1000;
+				// 纵向输出
+				// format:"$DP_TYPE $QUERY_LENGTH $TIME"
+				if (time == 101)
+				{
+					time = 1;
+					queryLength++;
+				}
+				// bwAIO.write(dpType + "," + queryLength + ","
+				// + String.valueOf(tmptime));
+				// bwAIO.newLine();
+				bwall.write(dpType + "," + queryLength + ","
+				        + String.valueOf(tmptime));
+				bwall.newLine();
+				wastetime = 0.0;
+				time++;
+			}
+			line = br.readLine();
+		}
+		br.close();
+		// }
+		// bwAIO.flush();
+		// bwAIO.close();
+	}
+
 	public void mergeResults(String path) throws IOException
 	{
 		BufferedWriter bwall = new BufferedWriter(new FileWriter(path
 		        + "result.csv"));
 		bwall.write("type,length,time");
 		bwall.newLine();
-		extractResultForDAATFromOne(path + "DAAT/", bwall);
-		extractResultForDPFromOne(path + "Maxscore/", "Maxscore", bwall);
-		extractResultForDPFromOne(path + "WAND/", "WAND", bwall);
+		File[] records = new File(path).listFiles(new FileFilter() {
+
+			@Override
+			public boolean accept(File pathname)
+			{
+				// TODO Auto-generated method stub
+				if (pathname.getName().lastIndexOf(".txt") == -1)
+					return false;
+				else
+					return true;
+			}
+		});
+		Arrays.sort(records, new Comparator<File>() {
+
+			@Override
+			public int compare(File o1, File o2)
+			{
+				// TODO Auto-generated method stub
+				return o1.getName().compareTo(o2.getName());
+			}
+		});
+		extractResultForDAATFromOne(records[0], bwall);
+		extractResultForDPFromOne(records[1], "Maxscore", bwall);
+		extractResultForDPFromOne(records[2], "WAND", bwall);
 		bwall.flush();
 		bwall.close();
 	}
